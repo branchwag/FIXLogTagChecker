@@ -1,6 +1,8 @@
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.File;
 import java.util.*;
 
 public class TagChecker {
@@ -8,17 +10,30 @@ public class TagChecker {
     //map to store tag count per msgtype
     private Map<String, Map<String, Integer>> messageTypeStats = new HashMap<>();
 
-	//for now i'm just going to pass an array of string, but setting this up so a file can be read in eventually
     public void analyzeLogs(String filename) {
-		try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
-			String line;
-			while ((line = reader.readLine()) != null) {
-				analyzeFIXMessage(line);
-			}
-		} catch (IOException e) {
-			System.err.println("Error reading file: " + e.getMessage());
-		}
+	File file = new File(filename);
+	if (!file.exists()) {
+	     System.err.println("Error: File " + filename + " does not exists");
+	    return;
 	}
+	System.out.println("Processing file: " + filename);
+	try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+	    String line;
+	    int lineCount = 0;
+	    while ((line = reader.readLine()) != null) {
+		lineCount++;
+		try {
+		    analyzeFIXMessage(line);
+		} catch (Exception e) {
+		    System.err.println("Warning: Error processing line " + lineCount + ": " + e.getMessage());
+		}
+	    }
+	} catch (FileNotFoundException e) {
+	    System.err.println("Error: File " + filename + " not found.");
+	} catch (IOException e) {
+	    System.err.println("Error: an IO exception occurred while reading file.");
+	}
+    }
 
     public void analyzeFIXMessage(String message) {
 		String[] fields = message.split("\\|");
@@ -104,18 +119,16 @@ public class TagChecker {
         }
     }
 	public static void main (String[] args) {
-		TagChecker tagChecker = new TagChecker();
-
-		//just testing with an array of strings as messages for now
-		String[] messages = {
-            "8=FIX.4.4|9=100|35=A|49=SenderCompID|56=TargetCompID|34=1|52=20250210-12:00:00.000|98=0|108=30|10=123",
-            "8=FIX.4.4|9=80|35=0|49=SenderCompID|56=TargetCompID|34=2|52=20250210-12:00:05.000|10=234",
-            "8=FIX.4.4|9=150|35=8|49=SenderCompID|56=TargetCompID|34=3|52=20250210-12:00:10.000|11=Order123|17=ExecID1|150=0|39=0|55=AAPL|54=1|38=100|44=150.25|10=345"
-        };
-		for (String message: messages) {
-			tagChecker.analyzeFIXMessage(message);
+		
+		if (args.length != 1) {
+		    System.out.println("Usage: java TagChecker <filename>");
+		    System.out.println("Example: java TagChecker TESTSESSION.message.log");
+		    return;
 		}
 
+
+		TagChecker tagChecker = new TagChecker();
+		tagChecker.analyzeLogs(args[0]);
 		System.out.println("Processing...");
 		tagChecker.printStats();
 	}
