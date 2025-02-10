@@ -1,4 +1,4 @@
-# FIX Tag Occurence Tester
+# FIX Tag Occurrence Tester
 
 This Java program takes in FIX logs and returns what tags appear in it
 
